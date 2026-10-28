@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.forum.mapper.PostMapper">
+
+    <!--
+        分页查询帖子列表（联表带作者信息）
+        排序字段使用 <choose> 白名单方式，防止 SQL 注入（不使用 ${order} 直接拼接用户输入）
+    -->
+    <select id="selectPageWithAuthor" resultType="com.campus.forum.entity.Post">
+        SELECT p.*,
+               u.nickname   AS author_nickname,
+               u.avatar_url AS author_avatar_url
+        FROM post p
+                 LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="auditStatus != null">AND p.audit_status = #{auditStatus}</if>
+            <if test="type != null">AND p.type = #{type}</if>
+            <if test="keyword != null and keyword != ''">
+                AND p.title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY p.is_pinned DESC,
+        <choose>
+            <when test="sort == 'view_count'">p.view_count</when>
+            <when test="sort == 'like_count'">p.like_count</when>
+            <when test="sort == 'comment_count'">p.comment_count</when>
+            <otherwise>p.created_at</otherwise>
+        </choose>
+        <choose>
+            <when test="order == 'asc'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+        , p.created_at DESC
+    </select>
+
+    <select id="selectWorkflowPage" resultType="com.campus.forum.entity.Post">
+        SELECT p.*,
+               u.nickname AS author_nickname,
+               u.avatar_url AS author_avatar_url
+        FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="userId != null">AND p.user_id = #{userId}</if>
+            <choose>
+                <when test="stage == 'WAITING'">AND p.audit_status = 'PENDING'</when>
+                <when test="stage == 'REVIEWING'">AND p.audit_status = 'REVIEWING'</when>
+                <when test="stage == 'COMPLETED'">AND p.audit_status IN ('APPROVED', 'REJECTED')</when>
+            </choose>
+        </where>
+        ORDER BY p.updated_at DESC, p.created_at DESC
+    </select>
+
+</mapper>

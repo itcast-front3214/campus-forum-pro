@@ -1,0 +1,84 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: campus-forum
+
+  datasource:
+    # ⚠️ 修改为你的 MySQL 连接信息
+    # Docker 运行 MySQL 时端口通常映射到 3307（见 README）
+    url: ${DB_URL:jdbc:mysql://localhost:3307/campus_forum?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      # Docker Redis 默认端口 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: 1000ms
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.campus.forum.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    # 开发阶段打开SQL日志，上线时改为 org.apache.ibatis.logging.nologging.NoLoggingImpl
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 生产环境必须通过 JWT_SECRET 注入独立的 Base64 密钥（至少 256 bit）
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+  header: Authorization
+  prefix: "Bearer "
+
+# Swagger / SpringDoc 配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  packages-to-scan: com.campus.forum.controller
+
+# 自定义配置
+forum:
+  # 帖子详情缓存时间（分钟）
+  post-cache-ttl: 10
+  # 浏览量去重时间窗口（小时）
+  view-dedup-hours: 1
+  # 热榜缓存时间（分钟）
+  hot-posts-cache-ttl: 5
+  # 允许跨域的前端地址
+  cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
